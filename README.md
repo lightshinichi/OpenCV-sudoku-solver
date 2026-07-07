@@ -5,14 +5,39 @@ Point your camera at a sudoku puzzle and watch the solution appear overlaid on t
 - **`solver.py`** — a 9x9 sudoku solver using a backtracking algorithm.
 - **`camera_solver.py`** — an OpenCV pipeline that detects a sudoku board through the camera (or in a photo), reads the digits, solves the puzzle with `solver.py`, and projects the answer back onto the live frame.
 
-## Setup
-
-Requires Python 3.9+. No Tesseract or deep-learning framework is needed — digit recognition is done by template matching against your system fonts.
+## Quick start
 
 ```bash
+# 1. Clone and enter the repo
+git clone <repo-url>
+cd OpenCV-sudoku-solver
+
+# 2. Create a virtual environment and install dependencies
 python3 -m venv .venv
-.venv/bin/pip install opencv-python numpy pillow
+.venv/bin/pip install -r requirements.txt
+
+# 3. Run with your camera
+.venv/bin/python camera_solver.py
 ```
+
+Alternatively, activate the environment first and use plain `python`:
+
+```bash
+source .venv/bin/activate
+python camera_solver.py
+```
+
+## Dependencies
+
+Requires Python 3.9+. All Python dependencies are listed in [`requirements.txt`](requirements.txt):
+
+| Package         | Used for                                          |
+| --------------- | ------------------------------------------------- |
+| `opencv-python` | camera capture, board detection, warping, display |
+| `numpy`         | image arrays and template-matching math           |
+| `pillow`        | rendering system-font digit templates for OCR     |
+
+No Tesseract or deep-learning framework is needed — digit recognition is done by template matching against your system fonts. `solver.py` on its own has no dependencies at all (pure standard library).
 
 ## Usage
 
