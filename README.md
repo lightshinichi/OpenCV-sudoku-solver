@@ -1,59 +1,84 @@
-# Sudoku Solver: A Python Implementation Using Backtracking
+# OpenCV Sudoku Solver
 
-This Python script is designed to solve Sudoku puzzles using a backtracking algorithm. It takes a partially filled 9x9 Sudoku board as input and outputs the completed board. The script defines several functions to accomplish this: `solve`, `check_if_valid`, `print_board`, and `find_empty`. Below is a detailed explanation of each component and how to use the script.
+Point your camera at a sudoku puzzle and watch the solution appear overlaid on the board in real time. The project has two parts:
 
-## Features
+- **`solver.py`** — a 9x9 sudoku solver using a backtracking algorithm.
+- **`camera_solver.py`** — an OpenCV pipeline that detects a sudoku board through the camera (or in a photo), reads the digits, solves the puzzle with `solver.py`, and projects the answer back onto the live frame.
 
-- **Solve any 9x9 Sudoku puzzle**: Given a valid Sudoku puzzle, this script can fill in the missing numbers to complete the puzzle.
-- **Backtracking algorithm**: Utilizes a backtracking algorithm to efficiently find the solution.
-- **Input validation**: Checks if a number can be legally placed in a given position according to Sudoku rules.
-- **Pretty print**: Neatly prints the Sudoku board before and after solving, making it easy to visualize the puzzle and its solution.
+## Setup
 
-## How It Works
+Requires Python 3.9+. No Tesseract or deep-learning framework is needed — digit recognition is done by template matching against your system fonts.
 
-### The `solve` Function
-
-This is the main function that attempts to solve the Sudoku puzzle. It works recursively by trying to fill the board with valid numbers from 1 to 9. If it encounters a situation where no valid number can be placed in a position, it backtracks to the previous step and tries a different number.
-
-### The `check_if_valid` Function
-
-This function checks if a given number can be placed at a specified position on the board. It ensures that the number is not already present in the same row, column, or 3x3 subgrid according to Sudoku rules.
-
-### The `print_board` Function
-
-This function prints the Sudoku board in a user-friendly format, with lines separating each 3x3 subgrid for better readability.
-
-### The `find_empty` Function
-
-This function searches the board for an empty spot (denoted by 0) and returns the position (row and column) of the first empty spot found. This position is used by the `solve` function to try placing numbers.
+```bash
+python3 -m venv .venv
+.venv/bin/pip install opencv-python numpy pillow
+```
 
 ## Usage
 
-1. **Define the Sudoku puzzle**: Input the Sudoku puzzle as a 9x9 grid (list of lists) with zeros representing empty spots. An example puzzle is provided in the script.
+### Live camera
 
-2. **Run the script**: Execute the script in a Python environment. The script will first print the original Sudoku board, then attempt to solve the puzzle, and finally print the solved board.
+```bash
+.venv/bin/python camera_solver.py            # default camera
+.venv/bin/python camera_solver.py --camera 1 # a different camera
+```
 
-3. **View the solution**: After the script finishes running, the solved Sudoku puzzle will be printed to the console.
+Hold the puzzle so the whole grid is visible, roughly face-on and evenly lit. Once the board is read successfully, the missing digits are drawn in green on top of the board and tracked as the camera moves.
 
-## Example
+Keys: **`r`** re-scan (new puzzle), **`s`** save a snapshot, **`q`** quit.
 
-Here's a simple example of how to define a Sudoku puzzle and solve it using the script:
+> On macOS, the first launch will ask you to grant camera access to your terminal (System Settings → Privacy & Security → Camera).
+
+### Still image
+
+```bash
+.venv/bin/python camera_solver.py --image photo.jpg
+```
+
+Prints the detected and solved boards to the console and writes `photo_solved.png` with the overlay. Add `--no-show` to skip opening a window.
+
+### Solver only
+
+```bash
+.venv/bin/python solver.py
+```
+
+Solves the example board hardcoded in the script. To solve your own puzzle, edit the `board` list (zeros are empty cells) or import the module:
 
 ```python
-board = [
-    [7,8,0,4,0,0,1,2,0],
-    [6,0,0,0,7,5,0,0,9],
-    [0,0,0,6,0,1,0,7,8],
-    [0,0,7,0,4,0,2,6,0],
-    [0,0,1,0,5,0,9,3,0],
-    [9,0,4,0,6,0,0,0,5],
-    [0,7,0,3,0,0,0,1,2],
-    [1,2,0,0,0,7,4,0,0],
-    [0,4,9,2,0,6,0,0,7]
-]
+from solver import solve, print_board
 
+board = [[7,8,0,4,0,0,1,2,0], ...]  # 9 rows of 9, 0 = empty
+solve(board)      # fills the board in place, returns True if solvable
 print_board(board)
-solve(board)
-print("-------------------------------------")
-print("Solved board:")
-print_board(board)
+```
+
+## How the camera pipeline works
+
+Each frame goes through five stages:
+
+1. **Find the board** — grayscale, blur, and adaptive threshold, then take the largest 4-corner contour in the frame.
+2. **Flatten it** — perspective-warp the board to a top-down 450x450 square.
+3. **Read the digits** — split into 81 cells; in each cell, isolate the digit blob (discarding grid-line remnants), then classify it by cosine similarity against digits 1–9 rendered in common system fonts (Arial, Helvetica, Times, …), with OpenCV's Hershey fonts as a fallback. Low-confidence matches are treated as empty.
+4. **Solve** — validate that the detected givens are consistent and that there are at least 17 of them, then run the backtracking solver from `solver.py`. If OCR misread a digit, the givens usually conflict and the frame is rejected rather than showing a wrong answer.
+5. **Overlay** — draw only the filled-in digits on a flat canvas and inverse-warp it back into the camera frame, so the solution sits on the physical board.
+
+The solved puzzle is cached, so after the first successful read the script only re-detects the board's position each frame — press `r` to scan a different puzzle.
+
+## How the solver works
+
+### The `solve` function
+
+The main function that solves the puzzle. It works recursively by trying to fill empty cells with valid numbers from 1 to 9. If it reaches a position where no valid number fits, it backtracks to the previous step and tries a different number.
+
+### The `check_if_valid` function
+
+Checks whether a given number can be placed at a specified position, ensuring it doesn't already appear in the same row, column, or 3x3 subgrid.
+
+### The `print_board` function
+
+Prints the board in a user-friendly format, with lines separating each 3x3 subgrid.
+
+### The `find_empty` function
+
+Scans the board for the next empty spot (denoted by 0) and returns its (row, column), which `solve` uses to place the next number.
