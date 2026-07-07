@@ -36,7 +36,7 @@ def check_if_valid(b, num, pos):
             return False
     #check if the inserted number is present in the column
     for j in range(len(b)):
-        if b[j][pos[1]] == num and pos[0] != i:
+        if b[j][pos[1]] == num and pos[0] != j:
             return False
     # Check if the inserted number is present in the box
     box_x = pos[1] // 3
@@ -75,8 +75,9 @@ def find_empty(b):
     return None     
 
 
-print_board(board)
-solve(board)
-print("-------------------------------------")
-print(" Solved board : ")
-print_board(board)
+if __name__ == "__main__":
+    print_board(board)
+    solve(board)
+    print("-------------------------------------")
+    print(" Solved board : ")
+    print_board(board)
